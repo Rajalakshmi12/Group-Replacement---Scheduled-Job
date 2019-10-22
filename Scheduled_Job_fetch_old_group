@@ -62,6 +62,7 @@ if(oldGroup.next())
 					gs.log("RR_SN1241_Task_Alm_Cmdb_Check_Counts: Table name : "+dict.name+ ", Number of records: "+loopTables.getRowCount());
 				}
 				var count = 0;
+					var updated = '';
 				while(loopTables.next())
 					{
 					if(loopTables[columnName]==groupToBeReplaced) { loopTables[columnName] = groupReplaceWith; }
@@ -80,8 +81,8 @@ if(oldGroup.next())
 			
 			//Record the data in the attachment
 			var attach=new Attachment();
-			var tablename='sysauto_script';
-			var sysid = '8ac880531bec8450f23711f8bc4bcb42';
+			var tablename = current.getTableName();
+			var sysid = current.getUniqueValue();
 			
 			var attachment = new GlideSysAttachment();
 			var agr = attachment.getAllAttachments(tablename, sysid);
