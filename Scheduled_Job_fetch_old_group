@@ -1,0 +1,97 @@
+//Start time
+var startTime = new GlideDateTime();
+var msg = '<body><u>RR_SN1241_Task_Alm_Cmdb_Check_Counts started at <b>'+startTime+'</b></u><br/><br/><br/>';
+msg += 'Find below the number of records in the Task, Alm_asset and CMDB tables <br/>';
+
+var oldGroup = new GlideRecord('sys_user_group');
+oldGroup.addQuery('name','TO Server Engineering');
+oldGroup.query();
+var groupToBeReplaced = '';
+if(oldGroup.next())
+	{
+	groupToBeReplaced = oldGroup.sys_id;
+	msg += '<br> Old Group :'+groupToBeReplaced+', Group name: '+oldGroup.name+'<br/>';
+	var newGroup = new GlideRecord('sys_user_group');
+	newGroup.addQuery('name','Server Engineering');
+	newGroup.query();
+	var groupReplaceWith = '';
+	if(newGroup.next())
+		{
+		groupReplaceWith = newGroup.sys_id;
+		msg += '<br> New Group :'+groupReplaceWith+', Group name: '+newGroup.name+'<br/>';
+		msg += '<br><b>-----------------------------------------------------------------------------------------------------------</b></br>';
+		
+		// Write the Queries to fetch the numbe rof records
+		var queryTask = 'reference=sys_user_group^internal_type=reference^name=task';
+		var queryAsset = 'reference=sys_user_group^internal_type=reference^name=alm_asset';
+		var queryCmdb = 'reference=sys_user_group^internal_type=reference^nameINcmdb_ci,cmdb_rel_ci,cmdb_ci_database,cmdb_ci_computer,cmdb_ci_server,cmdb_ci_unix_server';
+		
+		var arrQuery = [queryTask,queryAsset,queryCmdb];
+		for(i=0;i<=arrQuery.length-1;i++)
+			{
+			msg += "<br></br>The query ran "+i+" : "+arrQuery[i];
+			
+			var dict = new GlideRecord('sys_dictionary');
+			dict.addEncodedQuery(arrQuery[i]);
+			dict.orderBy('name');
+			dict.query();
+			
+			while(dict.next())
+				{
+				var loopTables = new GlideRecord(dict.name);
+				loopTables.addQuery(dict.element,groupToBeReplaced);
+				if(i==0)
+					{ loopTables.addActiveQuery();
+				}
+				loopTables.setWorkflow(false);
+				//loopTables.setLimit(5);
+				loopTables.query();
+				
+				var columnName = dict.element;
+				if(loopTables.hasNext())
+					{
+					var url = '';
+					msg += '</br>Table name : <b>'+dict.name+ '</b>, Column name: <b>'+columnName+ '</b>, Number of records: <b>'+loopTables.getRowCount()+'</b>';
+					url += "https://"+gs.getProperty('instance_name')+".service-now.com/"+dict.name+"_list.do?sysparm_query="+dict.element+"%3D"+groupToBeReplaced;
+					if(i==0)
+						{
+						url +='%5Eactive%3Dtrue';
+					}
+					msg += '<br>'+'<a href='+url+' target="_blank">Click Here</a></br>';
+					
+					gs.log("RR_SN1241_Task_Alm_Cmdb_Check_Counts: Table name : "+dict.name+ ", Number of records: "+loopTables.getRowCount());
+				}
+				var count = 0;
+				while(loopTables.next())
+					{
+					if(loopTables[columnName]==groupToBeReplaced) { loopTables[columnName] = groupReplaceWith; }
+						//updated = loopTables.update();
+						if(updated) {
+							count++;
+						}
+					}
+					if(count!=0){
+						msg += '<br>The records updated on the table :<b>'+dict.name+' </b> and the column: <b>'+dict.element+' </b> is: '+count+'</br>';
+						msg += '<br><b>-----------------------------------------------------------------------------------------------------------</b></br>';
+						gs.info("The records updated on the table: "+dict.name+" and the column: "+dict.element+" is: "+count);
+					}
+				}
+			}
+			
+			//Record the data in the attachment
+			var attach=new Attachment();
+			var tablename='sysauto_script';
+			var sysid = '8ac880531bec8450f23711f8bc4bcb42';
+			
+			var attachment = new GlideSysAttachment();
+			var agr = attachment.getAllAttachments(tablename, sysid);
+			while(agr.next()) {
+				attachment.deleteAttachment(agr.getValue("sys_id"));
+			}
+		}
+	}
+	//End time
+	var endTime = new GlideDateTime();
+	msg += '<br><br><br><u>RR_SN1241_Task_Alm_Cmdb_Check_Counts ended at <b>'+endTime+'</b></u></body>';
+	attach.write(tablename,sysid,"SN1241_number_of_records_Job2.html", 'html', msg);
+	
